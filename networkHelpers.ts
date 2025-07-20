@@ -1,5 +1,11 @@
 const RAND_MAX = 1; // 1 -> max of random
 
+export const stdPrinter = {
+    info: (...data: any) => {
+        console.log(new Date(), ...data);
+    }
+}
+
 export function sigmoid(x: number) {
     return 1 / (1 + Math.exp(-x));
 }
