@@ -1,4 +1,4 @@
-const RAND_MAX = 1; // 1 -> max of random
+const RAND_MAX =  0x7fff; // max of random in C (RAND_MAX)
 
 export const stdPrinter = {
     info: (...data: any) => {
@@ -11,21 +11,22 @@ export function sigmoid(x: number) {
 }
 
 export function sigmoidD(x: number) {
-    return x * (1 - x);
+    return sigmoid(x) * (1 - sigmoid(x));
 }
 
 export function initWeights() {
-    return Math.random() / RAND_MAX;
+    return (Math.random() * RAND_MAX) / RAND_MAX;
 }
 
 export function shuffle(setOrder: number[]) {
     if (setOrder.length > 1) {
         const length = setOrder.length;
-        for (let i = 0; i < setOrder.length - 1; i++) {
-            const randIndex = i + Math.random() / (RAND_MAX / (length - 1) + 1);
+        const lastIndex = length - 1;
+        for (let index = 0; index < length; index++) {
+            const randIndex = Math.round((Math.random() * lastIndex));
             const randIndexValue = setOrder[randIndex];
-            setOrder[randIndex] = setOrder[i];
-            setOrder[i] = randIndexValue;
+            setOrder[randIndex] = setOrder[index];
+            setOrder[index] = randIndexValue;
         }
     }
 
