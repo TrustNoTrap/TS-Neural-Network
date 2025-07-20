@@ -35,7 +35,7 @@ const network: NeuralNetworkData = {
     shuffle,
 };
 
-const timingTag = 'trainingStart';
+const timingTag = 'Training period';
 console.time(timingTag);
 
 // Init
@@ -46,10 +46,7 @@ console.time(timingTag);
 for (let i = 0; i < DEFAULTS.inputs; i++) {
     if (network.layers.hidden.weights.length <= i) network.layers.hidden.weights.push([]);
     for (let j = 0; j < DEFAULTS.hiddenLayers; j++) {
-        if (network.layers.hidden.weights[i].length <= j)
-            network.layers.hidden.weights[i].push(initWeights());
-        else
-            network.layers.hidden.weights[i][j] = initWeights();
+        network.layers.hidden.weights[i][j] = initWeights();
     }
 }
 
@@ -57,10 +54,7 @@ for (let i = 0; i < DEFAULTS.inputs; i++) {
 for (let i = 0; i < DEFAULTS.hiddenLayers; i++) {
     if (network.layers.output.weights.length <= i) network.layers.output.weights.push([]);
     for (let j = 0; j < DEFAULTS.outputs; j++) {
-        if (network.layers.output.weights[i].length <= j)
-            network.layers.output.weights[i].push(initWeights());
-        else
-            network.layers.output.weights[i][j] = initWeights();
+        network.layers.output.weights[i][j] = initWeights();
     }
 }
 
@@ -68,13 +62,16 @@ for (let i = 0; i < DEFAULTS.hiddenLayers; i++) {
 
 // Bias
 for (let i = 0; i < DEFAULTS.outputs; i++) {
-    if (network.layers.output.biases.length <= i)
-            network.layers.output.biases.push(initWeights());
-    else
-        network.layers.output.biases[i] = initWeights();
+    network.layers.output.biases[i] = initWeights();
 }
 
+for (let i = 0; i < DEFAULTS.hiddenLayers; i++) {
+    network.layers.hidden.biases[i] = 0;
+}
+// Bias end
+
 // Init end
+
 
 // Training
 for (let epoch = 0; epoch < DEFAULTS.epochs; epoch++) {
@@ -87,22 +84,31 @@ for (let epoch = 0; epoch < DEFAULTS.epochs; epoch++) {
 
         // Compute hidden layer activation
         for (let j = 0; j < DEFAULTS.hiddenLayers; j++) {
-            let activation = network.layers.hidden.biases[i];
+            let activation = network.layers.hidden.biases[j];
 
             for (let k = 0; k < DEFAULTS.inputs; k++) {
                 activation += network.training.inputs[i][k] * network.layers.hidden.weights[k][j];
             }
 
-            if (network.layers.hidden.nodes.length <= j)
-                network.layers.hidden.nodes.push(sigmoid(activation));
-            else
-                network.layers.hidden.nodes[j] = sigmoid(activation);
+            network.layers.hidden.nodes[j] = sigmoid(activation);
+        }
+
+        // Compute output layer activation
+        for (let j = 0; j < DEFAULTS.hiddenLayers; j++) {
+            let activation = network.layers.hidden.biases[j];
+
+            for (let k = 0; k < DEFAULTS.inputs; k++) {
+                activation += network.layers.hidden.nodes[k] * network.layers.output.weights[k][j];
+            }
+
+            network.layers.output.nodes[j] = sigmoid(activation);
         }
 
         stdPrinter.info(
-            'Input:\t', network.training.inputs[i][0],
-            'Output:\t', network.training.inputs[i][1],
-            'Predicted Output:', network.layers.output.nodes[0], network.training.outputs[i][0],
+            'Input:', network.training.inputs[i],
+            '\tOutput:', network.layers.output.nodes[0],
+            '\tPredicted Output:', network.training.outputs[i][0],
+            // network.layers.output.nodes, network.training.outputs,
         );
 
         // Back propagation
