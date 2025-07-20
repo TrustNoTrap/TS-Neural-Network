@@ -1,4 +1,4 @@
-import { shuffle, initWeights, sigmoidD, sigmoid } from './networkHelpers.ts';
+import { shuffle, initWeights, sigmoidD, sigmoid, stdPrinter } from './networkHelpers.ts';
 
 // Simple XOR recognition
 const DEFAULTS = {
@@ -16,10 +16,12 @@ const network: NeuralNetworkData = {
         hidden: {
             weights: [],
             biases: [],
+            nodes: [],
         },
         output: {
             weights: [],
             biases: [],
+            nodes: [],
         },
     },
     training: {
@@ -33,15 +35,19 @@ const network: NeuralNetworkData = {
     shuffle,
 };
 
+const timingTag = 'trainingStart';
+console.time(timingTag);
+
 // Init
 
 // Weights
 
 // Inputs
 for (let i = 0; i < DEFAULTS.inputs; i++) {
+    if (network.layers.hidden.weights.length <= i) network.layers.hidden.weights.push([]);
     for (let j = 0; j < DEFAULTS.hiddenLayers; j++) {
-        if (!network.layers.hidden.weights[i][j])
-            network.layers.hidden.weights.push(initWeights());
+        if (network.layers.hidden.weights[i].length <= j)
+            network.layers.hidden.weights[i].push(initWeights());
         else
             network.layers.hidden.weights[i][j] = initWeights();
     }
@@ -49,9 +55,10 @@ for (let i = 0; i < DEFAULTS.inputs; i++) {
 
 // Outputs
 for (let i = 0; i < DEFAULTS.hiddenLayers; i++) {
+    if (network.layers.output.weights.length <= i) network.layers.output.weights.push([]);
     for (let j = 0; j < DEFAULTS.outputs; j++) {
-        if (!network.layers.output.weights[i][j])
-            network.layers.output.weights.push(initWeights());
+        if (network.layers.output.weights[i].length <= j)
+            network.layers.output.weights[i].push(initWeights());
         else
             network.layers.output.weights[i][j] = initWeights();
     }
@@ -61,10 +68,10 @@ for (let i = 0; i < DEFAULTS.hiddenLayers; i++) {
 
 // Bias
 for (let i = 0; i < DEFAULTS.outputs; i++) {
-    if (!network.layers.output.biases[i])
+    if (network.layers.output.biases.length <= i)
             network.layers.output.biases.push(initWeights());
-        else
-            network.layers.output.biases[i] = initWeights();
+    else
+        network.layers.output.biases[i] = initWeights();
 }
 
 // Init end
@@ -80,31 +87,100 @@ for (let epoch = 0; epoch < DEFAULTS.epochs; epoch++) {
 
         // Compute hidden layer activation
         for (let j = 0; j < DEFAULTS.hiddenLayers; j++) {
-            let activation = network.layers
+            let activation = network.layers.hidden.biases[i];
+
+            for (let k = 0; k < DEFAULTS.inputs; k++) {
+                activation += network.training.inputs[i][k] * network.layers.hidden.weights[k][j];
+            }
+
+            if (network.layers.hidden.nodes.length <= j)
+                network.layers.hidden.nodes.push(sigmoid(activation));
+            else
+                network.layers.hidden.nodes[j] = sigmoid(activation);
         }
 
+        stdPrinter.info(
+            'Input:\t', network.training.inputs[i][0],
+            'Output:\t', network.training.inputs[i][1],
+            'Predicted Output:', network.layers.output.nodes[0], network.training.outputs[i][0],
+        );
+
+        // Back propagation
+        // Compute change in output weights
+        const deltaOutput: number[] = [];
+        for (let j = 0; j < DEFAULTS.outputs; j++) {
+            const error = network.training.outputs[i][j] - network.layers.output.nodes[j];
+            deltaOutput[j] = error * sigmoidD(network.layers.output.nodes[j]);
+        }
+
+        // Compute change in hidden weights
+        const deltaHidden: number[] = [];
+        for (let j = 0; j < DEFAULTS.hiddenLayers; j++) {
+            let error = 0.0;
+            for (let k = 0; k < DEFAULTS.outputs; k++) {
+                error += deltaOutput[k] * network.layers.output.weights[j][k];
+            }
+            deltaHidden[j] = error * sigmoidD(network.layers.hidden.nodes[j]);
+        }
+
+        // Apply changes in output weights
+        for (let j = 0; j < DEFAULTS.outputs; j++) {
+            network.layers.output.biases[j] += deltaOutput[j] * network.learningRate;
+            for (let k = 0; k < DEFAULTS.hiddenLayers; k++) {
+                network.layers.output.weights[k][j] += network.layers.hidden.nodes[k] * deltaOutput[j] * network.learningRate;
+            }
+        }
+
+        // Apply changes in hidden weights
+        for (let j = 0; j < DEFAULTS.hiddenLayers; j++) {
+            network.layers.hidden.biases[j] += deltaHidden[j] * network.learningRate;
+            for (let k = 0; k < DEFAULTS.inputs; k++) {
+                network.layers.output.weights[k][j] += network.training.inputs[i][k] * deltaHidden[j] * network.learningRate;
+            }
+        }
     }
+}
+
+console.timeEnd(timingTag);
+stdPrinter.info('Training end');
+
+// Print results
+const final = {
+    hidden: {
+        weights: [],
+        biases: [],
+    },
+    output: {
+        biases: [],
+    },
+};
+
+// TODO: PRINT RESULTS
+for (let j = 0; j < DEFAULTS.hiddenLayers; j++) {
+
 }
 
 interface NeuralNetworkData {
     learningRate: number
     layers: {
         hidden: {
-            weights: number[];
+            weights: number[][];
             biases: number[];
+            nodes: number[];
         };
         output: {
-            weights: number[];
+            weights: number[][];
             biases: number[];
+            nodes: number[];
         };
     };
     training: {
-        inputs: [number, number][];
+        inputs: number[][];
         outputs: [number][];
         sets: {
             order: number[];
         }
     };
 
-    shuffle: (setOrder) => number[];
+    shuffle: (setOrder: number[]) => number[];
 };
