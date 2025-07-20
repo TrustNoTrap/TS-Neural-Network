@@ -1,4 +1,4 @@
-import { shuffle, initWeights, sigmoidD, sigmoid } from './networkHelpers.js';
+import { shuffle, initWeights, sigmoidD, sigmoid } from './networkHelpers.ts';
 
 // Simple XOR recognition
 const DEFAULTS = {
